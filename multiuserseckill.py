@@ -3,8 +3,8 @@ import time
 from datetime import datetime, date, timedelta
 from typing import Dict, Optional, List
 
-# from curl_cffi import requests
-import requests
+from curl_cffi import requests
+# import requests
 from loguru import logger
 import random
 from encory import RequestStrategyManager
@@ -90,13 +90,14 @@ class Seckkiller:
         proxies = random.choice(self.proxy_list) if self.proxy_list else None
         
         try:
-            response = requests.post(
+            response = requests.get(
                 url,
                 headers=headers,
-                data=process_data,
+                # data=process_data,
                 proxies=proxies,
                 timeout=1,
             )
+            print(response.text)
             return response
         except requests.Timeout:
             raise RequestError("请求超时")
@@ -133,10 +134,30 @@ class Seckkiller:
         )
 
     def start_seckill(self) -> None:
+        # 等待到指定开始时间
         self.wait_for_start_time()
-        while not self.stop_flag.is_set():
+        
+        # 记录实际开始时间
+        actual_start_time = time.time()
+        actual_start_datetime = datetime.fromtimestamp(actual_start_time + self.time_diff)
+        logger.info(f"[{self.account_name}] 实际开始时间: {actual_start_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}")
+        
+        # 立即开始第一次请求，不等待
+        try:
             self.post_seckill_url()
-            time.sleep(0.1)  # 避免请求过于频繁
+        except Exception as e:
+            logger.error(f"[{self.account_name}] 首次请求失败: {e}")
+        
+        # 继续循环执行后续请求
+        while not self.stop_flag.is_set():
+            try:
+                self.post_seckill_url()
+            except Exception as e:
+                logger.error(f"[{self.account_name}] 请求失败: {e}")
+            
+            # 只有在没有成功的情况下才等待，减少成功情况下的延迟
+            if not self.stop_flag.is_set():
+                time.sleep(0.01)  # 减少等待时间从0.1到0.01秒
 
     @staticmethod
     def get_network_time() -> datetime.time:
@@ -200,22 +221,46 @@ class Seckkiller:
         proxy_fetch_interval = 5  # 设置获取代理 IP 的间隔时间（秒）
         last_proxy_fetch_time = 0
         proxy_fetch_failed = False  # 标记代理获取是否失败
+        
+        logger.debug(f"[{self.account_name}] 目标启动时间: {self.start_time}")
+        logger.debug(f"[{self.account_name}] 时间差: {self.time_diff:.3f} 秒")
 
         while True:
-            # 使用本地时间加上时间差来计算当前实际时间
-            current_local = datetime.now().time()
-            adjusted_time = (
-                datetime.combine(date.today(), current_local) + 
-                timedelta(seconds=self.time_diff)
-            ).time()
-
-            if adjusted_time >= self.start_time:
+            # 使用高精度时间计算
+            current_timestamp = time.time()
+            current_local = datetime.fromtimestamp(current_timestamp).time()
+            adjusted_timestamp = current_timestamp + self.time_diff
+            adjusted_time = datetime.fromtimestamp(adjusted_timestamp).time()
+            
+            # 计算到启动时间的精确秒数差
+            target_datetime = datetime.combine(date.today(), self.start_time)
+            adjusted_datetime = datetime.fromtimestamp(adjusted_timestamp)
+            
+            
+            time_diff_seconds = (target_datetime - adjusted_datetime).total_seconds()
+            
+            # 如果时间已到或已过，立即启动
+            if time_diff_seconds <= 0:
                 logger.info(f"[{self.account_name}] Starting seckill...")
                 break
-
-            # 检查是否需要获取代理 IP
-            current_timestamp = time.time()
+            
+            # 如果剩余时间很短（小于0.001秒），使用忙等待
+            if time_diff_seconds <= 0.001:
+                logger.debug(f"[{self.account_name}] 进入精确等待模式，剩余: {time_diff_seconds:.6f} 秒")
+                while True:
+                    current_timestamp = time.time()
+                    adjusted_timestamp = current_timestamp + self.time_diff
+                    adjusted_datetime = datetime.fromtimestamp(adjusted_timestamp)
+                    time_diff_seconds = (target_datetime - adjusted_datetime).total_seconds()
+                    if time_diff_seconds <= 0:
+                        logger.info(f"[{self.account_name}] Starting seckill...")
+                        return
+                    # 微秒级忙等待
+                    time.sleep(0.0001)  # 0.1毫秒
+            
+            # 检查是否需要获取代理 IP（仅在剩余时间较长时执行）
             if (
+                time_diff_seconds > 1.0 and  # 剩余时间大于1秒时才获取代理
                 not self.proxy_list
                 and not proxy_fetch_failed
                 and current_timestamp - last_proxy_fetch_time > proxy_fetch_interval
@@ -232,8 +277,18 @@ class Seckkiller:
                     )
                     logger.debug(f"[{self.proxy_list}] Proxy fetch failed")
                     proxy_fetch_failed = True
-
-            time.sleep(0.01)
+            
+            # 根据剩余时间调整睡眠间隔
+            if time_diff_seconds > 5:
+                sleep_time = 0.1  # 剩余时间长时，每100毫秒检查一次
+            elif time_diff_seconds > 1:
+                sleep_time = 0.01  # 剩余时间中等时，每10毫秒检查一次
+            elif time_diff_seconds > 0.1:
+                sleep_time = 0.001  # 剩余时间短时，每1毫秒检查一次
+            else:
+                sleep_time = 0.0001  # 剩余时间很短时，每0.1毫秒检查一次
+                
+            time.sleep(sleep_time)
 
     def run(self) -> None:
         logger.info(f"[{self.account_name}] Waiting for start time: {self.start_time}")

@@ -22,15 +22,41 @@ class SeckillManager:
 
     def sync_time(self) -> float:
         """同步时间，返回时间差"""
-        network_time = Seckkiller.get_network_time()
-        local_time = datetime.now().time()
-        time_diff = (
-            datetime.combine(date.today(), network_time) - 
-            datetime.combine(date.today(), local_time)
-        ).total_seconds()
+        # 进行多次时间同步以提高精度
+        time_diffs = []
+        for i in range(3):  # 进行3次测量
+            start_local = time.time()
+            network_time = Seckkiller.get_network_time()
+            end_local = time.time()
+            
+            # 计算网络请求的平均延迟
+            request_latency = (end_local - start_local) / 2
+            
+            # 使用请求中点时间进行比较
+            middle_local_time = start_local + request_latency
+            middle_local_datetime = datetime.fromtimestamp(middle_local_time)
+            
+            network_datetime = datetime.combine(
+                middle_local_datetime.date(), 
+                network_time
+            )
+            
+            time_diff = (network_datetime - middle_local_datetime).total_seconds()
+            time_diffs.append(time_diff)
+            
+            logger.debug(f"时间同步第{i+1}次: {time_diff:.6f} 秒 (延迟: {request_latency*1000:.1f}ms)")
+            
+            if i < 2:  # 不是最后一次，等待一小段时间
+                time.sleep(0.1)
         
-        logger.info(f"网络时间与本地时间差: {time_diff:.3f} 秒")
-        return time_diff
+        # 使用中位数作为最终时间差，减少异常值影响
+        time_diffs.sort()
+        final_time_diff = time_diffs[1]  # 中位数
+        
+        logger.info(f"网络时间与本地时间差: {final_time_diff:.6f} 秒 (测量次数: {len(time_diffs)})")
+        logger.debug(f"所有测量值: {[f'{d:.6f}' for d in time_diffs]}")
+        
+        return final_time_diff
 
     def worker(self, user: UserConfig, time_diff: float) -> None:
         logger.info(f"Starting seckill for {user.account_name}...")
@@ -50,25 +76,36 @@ class SeckillManager:
         seckkiller.run()
 
     def print_remaining_time(self, time_diff: float) -> None:
+        logger.info(f"开始倒计时，目标时间: {self.config.start_time}")
+        
         while True:
-            # 使用本地时间加上时间差来计算当前实际时间
-            current_local = datetime.now().time()
-            adjusted_time = (
-                datetime.combine(date.today(), current_local) + 
-                timedelta(seconds=time_diff)
-            ).time()
+            # 使用高精度时间计算
+            current_timestamp = time.time()
+            adjusted_timestamp = current_timestamp + time_diff
+            adjusted_datetime = datetime.fromtimestamp(adjusted_timestamp)
             
-            remaining_seconds = (
-                datetime.combine(date.today(), self.config.start_time)
-                - datetime.combine(date.today(), adjusted_time)
-            ).total_seconds()
+            target_datetime = datetime.combine(date.today(), self.config.start_time)
+            
+            # 如果跨天了，调整目标时间
+            if adjusted_datetime.date() > date.today():
+                target_datetime = target_datetime + timedelta(days=1)
+            
+            remaining_seconds = (target_datetime - adjusted_datetime).total_seconds()
             
             if remaining_seconds <= 0:
                 logger.info("Time is up! All processes should start seckill...")
                 break
-                
-            logger.info(f"Remaining time: {remaining_seconds:.2f} seconds")
-            time.sleep(0.5)
+            
+            # 显示更精确的剩余时间
+            if remaining_seconds < 10:
+                logger.info(f"Remaining time: {remaining_seconds:.3f} seconds")
+                time.sleep(0.1)  # 最后10秒更频繁更新
+            elif remaining_seconds < 60:
+                logger.info(f"Remaining time: {remaining_seconds:.2f} seconds")
+                time.sleep(0.2)
+            else:
+                logger.info(f"Remaining time: {remaining_seconds:.1f} seconds")
+                time.sleep(0.5)
 
     def run(self) -> None:
         # 在主进程中同步时间
