@@ -1,0 +1,45 @@
+{
+    "users": [
+        {
+            "account_name": "user1",
+            "cookie_id": "",
+            "cookie_name": "cookie",
+            "basurl": "https://api.m.jd.com/client.action?functionId=newBabelAwardCollection&body={%22activityId%22:%226%22,%22scene%22:%221%22,%22args%22:%22key=2F8CF77EECB6D5513A48C2FC393B874A1530F3DB33E20D0D3C0716ACD877054AC475DA1E1E84BB9D34EBE3B74154F3EE_bingo,roleId=21A1C831504803C117914F464D41D795CAFD7D7B8D51EDAF8BA7C13D01D54990394FCA7E5304F5B3721596B7CE43DC51E776460C60EA8DFD527C97B66E3F7C346FB9B80A71CF5964C9E7F57562B5C53251340BD02C703ADE1A94342C3ACCCB680B7491D140EE9B178CF6FD3DE2EC299A1A90563965668931823B50B543C10E4AE5BFEEA26946FD5542D3D96750E84357CAF7C9922E1CE9033A211D69FC1593ED_bingo%22,%22log%22:%22~~,%22}&client=wh5&appid=babelh5",
+            "max_attempts": 1,
+            "thread_count": 1,
+            "key_value": "成功",
+            "key_message": "subCodeMsg",
+            "headers": {
+                "content-type": "application/x-www-form-urlencoded",
+                "accept": "*/*",
+                "x-babel-actid": "8aAH2buPVkxSfyxmxcSvgAVkb2v",
+                "sec-fetch-site": "same-site",
+                "x-rp-client": "h5_1.0.0",
+                "accept-language": "zh-CN,zh-Hans;q=0.9",
+                "accept-encoding": "gzip, deflate, br",
+                "sec-fetch-mode": "cors",
+                "origin": "https://pro.m.jd.com",
+                "user-agent": "jdapp;iPhone;15.2.30;;;M/5.0;appBuild/170045;jdSupportDarkMode/0;lang/zh_CN;site/CN;ccy/CNY;elder/0;ef/1;ep/%7B%22ciphertype%22%3A5%2C%22cipher%22%3A%7B%22ud%22%3A%22ZwGzCNSyYJDtEJTvZQHuEWGzCJVwZNU1ZWC3ZNq4ZNdtCzc2DtLuEK%3D%3D%22%2C%22sv%22%3A%22CJqkCy4y%22%2C%22iad%22%3A%22%22%7D%2C%22ts%22%3A1758247229%2C%22hdid%22%3A%22JM9F1ywUPwflvMIpYPok0tt5k9kW4ArJEU3lfLhxBqw%3D%22%2C%22version%22%3A%221.0.3%22%2C%22appname%22%3A%22com.360buy.jdmobile%22%2C%22ridx%22%3A-1%7D;Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1;",
+                "referer": "https://pro.m.jd.com/mall/active/8aAH2buPVkxSfyxmxcSvgAVkb2v/index.html?stath=54&navh=44&svcType=lbs&babelChannel=ttt2&tttparams=No0ITdeyJyZnMiOiIwMDAwIiwicG9zTG5nIjoiMTA0LjA2Nzc3IiwidWVtcHMiOiIwLTItMCIsImdMbmciOiIxMDQuMDY3NzciLCJnTGF0IjoiMzAuNTQ1Nzc1IiwibG5nIjoiMTA0LjA2Nzc3Iiwib3JpZW50IjoicCIsIm9zIjoiMTguMy4yIiwibGJzTGF0IjoiMzAuNTQ1Nzc1IiwiZExuZyI6IiIsIkxCU1R5cGUiOiIxIiwiZExhdCI6IiIsImxic0xuZyI6IjEwNC4wNjc3NyIsInByc3RhdGUiOiIwIiwiZ3BzX2FyZWEiOiIyMl8xOTMwXzUwOTQ3XzE0NTgzMyIsInNjYWxlIjoiMyIsIm1vZGVsIjoiaVBob25lMTcsMyIsInVuX2FyZWEiOiIyMl8xOTMwXzUwOTQ3XzE0NTgzMyIsIndpZHRoIjoiMTE3OSIsImxic0FyZWEiOiIyMl8xOTMwXzUwOTQ3XzE0NTgzMyIsImFkZHJlc3NJZCI6Ijk2NTEyMDU2MDgiLCJsYXQiOiIzMC41NDU3NzUiLCJjb3JuZXIiOjEsImFyZWFDb2RlIjoiMCIsInBvc0xhdCI6IjMwLjU0NTc3NSIsImRsIjoxfQ6%3D%3D",
+                "x-referer-page": "https://pro.m.jd.com/mall/active/8aAH2buPVkxSfyxmxcSvgAVkb2v/index.html",
+                "sec-fetch-dest": "empty",
+                "Host": "api.m.jd.com"
+            },
+            "data": {
+                "functionId": "hc_pjq_receiveCouponExpansion"
+            },
+            "proxy_flag": false,
+            "strategy_flag": "JD"
+        }
+    ],
+    "proxies": "http://need1.dmdaili.com:7771/dmgetip.asp?",
+    "mixues": [
+        {
+            "marketingId": "",
+            "round": "",
+            "secretword": ""
+        }
+    ],
+    "bw_keywords": "以东方茶会世界友,连接你我每一天",
+    "start_time": "09:59:59.910"
+}

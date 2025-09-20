@@ -82,7 +82,7 @@ class SeckillScheduler:
         while True:
             now = datetime.now()
             
-            # 如果是整点，运行任务
+            # 如果是整点运行任务,避免重复运行
             if now.minute == 0 and now.second == 0:
                 self.run_current_tasks()
                 # 等待1分钟，避免重复运行
@@ -134,7 +134,7 @@ def main():
             return
 
         if args.mode == "watch":
-            scheduler.watch_mode()
+            scheduler.watch_mode()  
         elif args.mode == "hour" and args.hour:
             scheduler.run_hour_tasks(args.hour.zfill(2))
         else:
