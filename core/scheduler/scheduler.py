@@ -52,6 +52,9 @@ class SeckillScheduler:
                 "description": task.description,
                 "start_time": task.start_time.strftime("%H:%M:%S.%f")[:-3],
             }
+            # 确保result包含必要信息
+            if not isinstance(result, dict):
+                result = {"success": True, "message": "任务执行完成"}
             self.notification_manager.notify_task_result(task_info, result)
 
         except Exception as e:
@@ -63,8 +66,9 @@ class SeckillScheduler:
             }
             error_result = {
                 "success": False,
-                "message": str(e),
+                "message": "任务执行失败",
                 "details": "任务执行过程中发生错误",
+                "failure_reason": str(e),
             }
             self.notification_manager.notify_task_result(task_info, error_result)
 

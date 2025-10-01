@@ -7,7 +7,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 from loguru import logger
-
+from datetime import datetime
 
 class INotificationService(ABC):
     """通知服务接口"""
@@ -105,7 +105,45 @@ class NotificationManager:
         Returns:
             是否通知成功
         """
-        message = f"任务: {task_info}\n\n任务结果: {result}"
+        
+        # 格式化任务信息
+        task_desc = task_info.get("description", "未知任务")
+        start_time = task_info.get("start_time", "未知时间")
+        account_name = task_info.get("account_name", "")
+        
+        # 格式化结果信息
+        success = result.get("success", False)
+        status = "✅ 成功" if success else "❌ 失败"
+        message_content = result.get("message", "")
+        details = result.get("details", "")
+        failure_reason = result.get("failure_reason", "")
+        
+        # 构建详细的通知消息
+        message_parts = [
+            f"🕐 发送时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"📋 任务描述: {task_desc}",
+            f"⏰ 计划时间: {start_time}",
+        ]
+        
+        if account_name:
+            message_parts.append(f"👤 执行账户: {account_name}")
+        
+        message_parts.extend([
+            f"📊 执行状态: {status}",
+        ])
+        
+        if message_content:
+            message_parts.append(f"💬 响应消息: {message_content}")
+        
+        if details:
+            message_parts.append(f"📝 详细信息: {details}")
+        
+        if failure_reason:
+            message_parts.append(f"🚫 失败原因: {failure_reason}")
+        
+        # 添加分隔线
+        message = "\n".join(message_parts)
+        
         return self.send_message(message)
 
     def get_available_services(self) -> list:

@@ -211,6 +211,24 @@ class SeckillExecutor:
         for t in seckill_threads:
             t.join()
 
+        # 检查是否成功完成
+        if not self.stop_flag.is_set():
+            # 如果所有线程都结束了但stop_flag未设置，说明失败了
+            failure_reason = f"达到最大尝试次数 ({self.max_attempts}) 仍未成功"
+            self.notification_manager.notify_task_result(
+                {
+                    "account_name": self.account_name,
+                    "description": f"秒杀任务 - {self.account_name}",
+                    "start_time": self.start_time.strftime("%H:%M:%S.%f")[:-3],
+                },
+                {
+                    "success": False,
+                    "message": "秒杀失败",
+                    "details": f"尝试了 {self.max_attempts} 次",
+                    "failure_reason": failure_reason,
+                },
+            )
+
         logger.info(f"[{self.account_name}] 秒杀完成")
 
 
