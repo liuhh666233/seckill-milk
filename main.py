@@ -227,5 +227,6 @@ def list_configs(ctx):
     if not any(configs_dir.rglob("*.json")):
         logger.info("  没有找到配置文件")
 
+
 if __name__ == "__main__":
     cli()
