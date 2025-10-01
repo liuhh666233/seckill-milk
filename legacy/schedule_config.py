@@ -5,12 +5,15 @@ import json
 from pathlib import Path
 import glob
 from loguru import logger
+
+
 @dataclass
 class TaskSchedule:
     start_time: time  # 任务开始时间
     config_file: str  # 配置文件路径
     enabled: bool = True  # 是否启用
     description: str = ""  # 任务描述
+
 
 class ScheduleManager:
     def __init__(self, schedule_file: str = "schedule.json"):
@@ -26,10 +29,12 @@ class ScheduleManager:
                 for hour_str, tasks in data.items():
                     self.schedules[hour_str] = [
                         TaskSchedule(
-                            start_time=datetime.strptime(task["start_time"], "%H:%M:%S.%f").time(),
+                            start_time=datetime.strptime(
+                                task["start_time"], "%H:%M:%S.%f"
+                            ).time(),
                             config_file=task["config_file"],
                             enabled=task.get("enabled", True),
-                            description=task.get("description", "")
+                            description=task.get("description", ""),
                         )
                         for task in tasks
                     ]
@@ -60,7 +65,7 @@ class ScheduleManager:
                     "start_time": task.start_time.strftime("%H:%M:%S.%f"),
                     "config_file": task.config_file,
                     "enabled": task.enabled,
-                    "description": task.description
+                    "description": task.description,
                 }
                 for task in tasks
             ]
@@ -72,4 +77,4 @@ class ScheduleManager:
     @staticmethod
     def scan_config_files(config_dir: str = "./configs") -> List[str]:
         """扫描配置文件目录"""
-        return glob.glob(f"{config_dir}/*.json") 
+        return glob.glob(f"{config_dir}/*.json")

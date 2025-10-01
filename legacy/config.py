@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Dict, Optional, List
 from datetime import datetime, time
 
+
 @dataclass
 class UserConfig:
     account_name: str
@@ -18,6 +19,7 @@ class UserConfig:
     strategy_flag: Optional[str] = None
     strategy_params: Optional[Dict] = None
 
+
 @dataclass
 class SeckillConfig:
     start_time: time
@@ -27,24 +29,21 @@ class SeckillConfig:
     bw_keywords: str = ""
 
     @classmethod
-    def from_dict(cls, config_dict: Dict) -> 'SeckillConfig':
+    def from_dict(cls, config_dict: Dict) -> "SeckillConfig":
         start_time = datetime.strptime(
-            config_dict.get("start_time", ""), 
-            "%H:%M:%S.%f"
+            config_dict.get("start_time", ""), "%H:%M:%S.%f"
         ).time()
-        
-        users = [
-            UserConfig(**user_dict)
-            for user_dict in config_dict.get("users", [])
-        ]
-        
+
+        users = [UserConfig(**user_dict) for user_dict in config_dict.get("users", [])]
+
         return cls(
             start_time=start_time,
             proxies=config_dict.get("proxies", ""),
             users=users,
             mixues=config_dict.get("mixues", []),
-            bw_keywords=config_dict.get("bw_keywords", "")
-        ) 
+            bw_keywords=config_dict.get("bw_keywords", ""),
+        )
+
 
 @dataclass
 class SeckkillerConfig:
@@ -66,7 +65,9 @@ class SeckkillerConfig:
     time_diff: float = 0.0
 
     @classmethod
-    def from_user_config(cls, user: UserConfig, global_config: SeckillConfig) -> 'SeckkillerConfig':
+    def from_user_config(
+        cls, user: UserConfig, global_config: SeckillConfig
+    ) -> "SeckkillerConfig":
         return cls(
             cookie_id=user.cookie_id,
             cookie_name=user.cookie_name,
@@ -83,5 +84,5 @@ class SeckkillerConfig:
             strategy_flag=user.strategy_flag,
             strategy_params=user.strategy_params,
             proxy_flag=user.proxy_flag,
-            time_diff=0.0
-        ) 
+            time_diff=0.0,
+        )
