@@ -46,6 +46,7 @@ class UserConfig:
     proxy_flag: bool = False
     strategy_flag: Optional[str] = None
     strategy_params: Optional[Dict[str, Any]] = None
+    request_interval: float = 0.02  # 请求间隔，默认20ms
 
 
 @dataclass

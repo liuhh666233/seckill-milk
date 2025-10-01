@@ -100,7 +100,7 @@ class SeckillExecutor:
 
     async def _request_generator(self):
         """异步生成器，按精确间隔产生请求（不受请求执行时间影响）"""
-        request_interval = 0.02  # 20ms间隔
+        request_interval = self.user_config.request_interval 
         start_time = time.time()
 
         # 预先创建所有请求任务
@@ -117,7 +117,6 @@ class SeckillExecutor:
             if not self._should_stop():
                 request_task = asyncio.create_task(self._make_request())
                 request_tasks.append(request_task)
-                logger.info(f"[{self.account_name}] 在精确时间点启动请求 {attempt + 1}")
 
         for i, request_task in enumerate(request_tasks):
             if self._should_stop():
@@ -155,9 +154,11 @@ class SeckillExecutor:
     @print_time_cost
     async def _make_request(self) -> requests.Response:
         """异步发送请求"""
-        logger.info(f"[{self.account_name}] 发送请求")
         url, process_data, headers = self._prepare_request()
         proxies = self.get_formatted_proxy()
+
+        if self._should_stop():
+            return None
 
         try:
             async with requests.AsyncSession() as session:

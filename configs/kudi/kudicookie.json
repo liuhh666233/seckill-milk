@@ -9,6 +9,7 @@
             "thread_count": 1,
             "key_value": "ok",
             "key_message": "message",
+            "request_interval": 0.01,
             "headers": {
                 "host": "miniapp.qmai.cn",
                 "content-length": "459",
@@ -46,6 +47,7 @@
             "thread_count": 1,
             "key_value": "ok",
             "key_message": "message",
+            "request_interval": 0.05,
             "headers": {
                 "host": "miniapp.qmai.cn",
                 "content-length": "459",
