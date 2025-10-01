@@ -45,7 +45,6 @@ class RequestStrategyManager:
             strategy_name = "default"
 
         if strategy_name not in self.strategies:
-            logger.warning(f"未找到请求策略: {strategy_name}，使用默认策略")
             return self.strategies["default"]
 
         return self.strategies[strategy_name]

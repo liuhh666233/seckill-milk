@@ -81,8 +81,6 @@ class SeckillExecutor:
 
     def post_seckill_url(self) -> dict:
         """执行秒杀请求并返回结果"""
-        is_first_request = True
-
         while not self._should_stop():
             try:
                 response = self._make_request()
@@ -94,12 +92,7 @@ class SeckillExecutor:
             self.attempts += 1
             if self._should_stop():
                 break
-
-            # 第一次请求失败后, 不进行等待, 直接进行第二次请求, 之后每次请求后等待0.05秒
-            if is_first_request:
-                is_first_request = False
-            else:
-                time.sleep(0.05)
+            time.sleep(0.02)
 
         # 如果没有成功，返回失败结果
         return {
