@@ -1,0 +1,10 @@
+{
+    "10": [
+        {
+            "start_time": "09:59:59.950",
+            "config_file": "./configs/jd/301-300.json",
+            "enabled": true,
+            "description": "09点59分整点秒杀任务"
+        }
+    ]
+}

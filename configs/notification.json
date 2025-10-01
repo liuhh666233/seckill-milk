@@ -1,0 +1,18 @@
+{
+    "default_service": "lark",
+    "services": {
+        "lark": {
+            "type": "lark",
+            "webhook_url": "",
+            "secret": "",
+            "enabled": true
+        },
+        "wechat": {
+            "type": "wechat",
+            "app_id": "your_app_id",
+            "app_secret": "your_app_secret",
+            "template_id": "your_template_id",
+            "enabled": false
+        }
+    }
+}

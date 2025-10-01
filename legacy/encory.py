@@ -8,7 +8,10 @@ from abc import ABC, abstractmethod
 import requests
 import json
 import hashlib
-import execjs
+
+import subprocess
+import tempfile
+import os
 from datetime import datetime
 from typing import Dict, Any, Tuple, Optional
 from loguru import logger
@@ -19,6 +22,77 @@ from base64 import b64encode
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 import urllib.parse
+
+
+class JavaScriptExecutor:
+    """
+    JavaScript executor using Node.js subprocess as execjs alternative
+    """
+
+    def __init__(self, js_file_path: str):
+        self.js_file_path = js_file_path
+        self._js_content = None
+        self._load_js_content()
+
+    def _load_js_content(self):
+        """Load JavaScript content from file"""
+        try:
+            with open(self.js_file_path, "r", encoding="utf-8") as f:
+                self._js_content = f.read()
+        except FileNotFoundError:
+            logger.error(f"JavaScript file not found: {self.js_file_path}")
+            self._js_content = ""
+
+    def call(self, function_name: str, *args):
+        """
+        Call a JavaScript function with arguments
+        """
+        if not self._js_content:
+            raise RuntimeError("JavaScript content not loaded")
+
+        # Create a temporary JavaScript file with the function call
+        js_code = f"""
+{self._js_content}
+
+// Call the function and output result
+const result = {function_name}({', '.join(repr(arg) for arg in args)});
+console.log(JSON.stringify(result));
+"""
+
+        try:
+            # Write to temporary file
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".js", delete=False, encoding="utf-8"
+            ) as temp_file:
+                temp_file.write(js_code)
+                temp_file_path = temp_file.name
+
+            # Execute with Node.js
+            result = subprocess.run(
+                ["node", temp_file_path], capture_output=True, text=True, timeout=10
+            )
+
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+
+            if result.returncode != 0:
+                raise RuntimeError(f"JavaScript execution failed: {result.stderr}")
+
+            # Parse the result
+            output = result.stdout.strip()
+            try:
+                return json.loads(output)
+            except json.JSONDecodeError:
+                return output
+
+        except subprocess.TimeoutExpired:
+            raise RuntimeError("JavaScript execution timed out")
+        except FileNotFoundError:
+            raise RuntimeError(
+                "Node.js not found. Please install Node.js to use JavaScript execution"
+            )
+        except Exception as e:
+            raise RuntimeError(f"JavaScript execution error: {str(e)}")
 
 
 class Encryptor:
@@ -44,8 +118,7 @@ class Encryptor:
         self.encryption_js = self.load_encryption_js
 
     def load_encryption_js(self):
-        with open("./js/mixue.js", "r", encoding="utf-8") as js_file:
-            return execjs.compile(js_file.read())
+        return JavaScriptExecutor("./js/mixue.js")
 
     def encrypt(
         self, method: str, params: Dict[str, Any], current_time: datetime
@@ -231,8 +304,7 @@ class TestIpRequestStrategy(RequestStrategy):
 class MixueEncryptionStrategy(RequestStrategy):
     def __init__(self, encryption_params: Dict[str, str]):
         self.encryption_params = encryption_params or {}
-        with open("./js/mixue.js", "r", encoding="utf-8") as js_file:
-            self.encryption_js = execjs.compile(js_file.read())
+        self.encryption_js = JavaScriptExecutor("./js/mixue.js")
 
     def prepare_request(
         self, current_time: datetime, data: Dict, headers: Dict, base_url: str
@@ -272,7 +344,11 @@ class JDRequestStrategy(RequestStrategy):
         return base_url, data, headers
 
     def process_response(self, response: requests.Response) -> Dict:
-        return response.json()
+        res = response.json()
+        if "data" in res:
+            return res["data"]
+        else:
+            return res
 
 
 class KuDiEncryptionStrategy(RequestStrategy):
@@ -303,19 +379,11 @@ class MTEncryptionStrategy(RequestStrategy):
     def prepare_request(
         self, current_time: datetime, data: Dict, headers: Dict, base_url: str
     ) -> Tuple[str, Dict, Dict]:
-        # info = MTEncryptionStrategy.get_coupon_info(headers, base_url)
-        # print(info)
-        if self.flage != "":
-            data = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
-            return base_url, data, headers
-        else:
-            info = MTEncryptionStrategy.get_coupon_info(headers, base_url)
-            data = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
-            self.flage = info.get("msg", {})
-            return base_url, data, headers
+        data = json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+        return base_url, data, headers
 
     def process_response(self, response: requests.Response) -> Dict:
-        res = response.json()
+        res = response.json()["data"]["coupon"]
         return res
 
     def _get_couponId(self, basurl):
