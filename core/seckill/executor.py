@@ -7,6 +7,7 @@
 import threading
 import time
 import random
+import asyncio
 from datetime import datetime, date, timedelta
 from typing import Dict, Optional, List
 
@@ -79,21 +80,57 @@ class SeckillExecutor:
             return None
         return self.proxy_manager.get_random_proxy()
 
-    def post_seckill_url(self) -> dict:
-        """执行秒杀请求并返回结果"""
+    async def post_seckill_url(self) -> dict:
+        """使用异步生成器实现精确时间控制的秒杀请求"""
         result = None
-        while not self._should_stop():
+
+        # 使用异步生成器按精确间隔产生请求
+        async for request_result in self._request_generator():
+            result = request_result
+            if result and result.get("success"):
+                return result
+
+        # 如果所有请求都失败，返回最后一个结果
+        return result or {
+            "success": False,
+            "message": "秒杀失败",
+            "details": f"尝试了 {self.max_attempts} 次",
+            "failure_reason": f"达到最大尝试次数 ({self.max_attempts}) 仍未成功",
+        }
+
+    async def _request_generator(self):
+        """异步生成器，按精确间隔产生请求（不受请求执行时间影响）"""
+        request_interval = 0.02  # 20ms间隔
+        start_time = time.time()
+
+        # 预先创建所有请求任务
+        request_tasks = []
+        for attempt in range(self.max_attempts):
+            # 计算精确的目标时间点
+            target_time = start_time + (attempt * request_interval)
+
+            # 等待到精确的目标时间点
+            current_time = time.time()
+            if current_time < target_time:
+                await asyncio.sleep(target_time - current_time)
+
+            if not self._should_stop():
+                request_task = asyncio.create_task(self._make_request())
+                request_tasks.append(request_task)
+                logger.info(f"[{self.account_name}] 在精确时间点启动请求 {attempt + 1}")
+
+        for i, request_task in enumerate(request_tasks):
+            if self._should_stop():
+                break
             try:
-                response = self._make_request()
+                response = await request_task
                 result = self._handle_response(response)
-                if result["success"]:
-                    return result
+                self.attempts += 1
+                yield result
             except Exception as e:
                 self._handle_error(e)
-            self.attempts += 1
-            if self._should_stop():
-                return result
-            time.sleep(0.02)
+                self.attempts += 1
+                yield None
 
     def _should_stop(self) -> bool:
         """检查是否应该停止请求"""
@@ -116,22 +153,24 @@ class SeckillExecutor:
         )
 
     @print_time_cost
-    def _make_request(self) -> requests.Response:
-        """发送请求"""
+    async def _make_request(self) -> requests.Response:
+        """异步发送请求"""
+        logger.info(f"[{self.account_name}] 发送请求")
         url, process_data, headers = self._prepare_request()
         proxies = self.get_formatted_proxy()
 
         try:
-            response = requests.get(
-                url,
-                headers=headers,
-                proxies=proxies,
-                timeout=1,
-            )
-            return response
-        except requests.Timeout:
+            async with requests.AsyncSession() as session:
+                response = await session.get(
+                    url,
+                    headers=headers,
+                    proxies=proxies,
+                    timeout=1,
+                )
+                return response
+        except asyncio.TimeoutError:
             raise RequestError("请求超时")
-        except requests.RequestException as e:
+        except Exception as e:
             raise RequestError(f"请求失败: {str(e)}")
 
     def _handle_response(self, response: requests.Response) -> dict:
@@ -143,11 +182,10 @@ class SeckillExecutor:
             response_data = strategy.process_response(response)
             message = response_data.get(self.key_message, "")
 
-            thread_id = threading.current_thread().ident
-            logger.debug(f"[{self.account_name}] 线程{thread_id} 响应: {message}")
+            logger.debug(f"[{self.account_name}] 响应: {message}")
 
             if self.key_value in message.lower():
-                logger.info(f"[{self.account_name}] 线程{thread_id} 成功完成请求")
+                logger.info(f"[{self.account_name}] 成功完成请求")
                 return {
                     "success": True,
                     "message": message,
@@ -155,7 +193,7 @@ class SeckillExecutor:
                     "failure_reason": None,
                 }
             else:
-                logger.warning(f"[{self.account_name}] 线程{thread_id} 意外响应: {message}")
+                logger.warning(f"[{self.account_name}] 意外响应: {message}")
                 return {
                     "success": False,
                     "message": f"意外响应: {message}",
@@ -177,8 +215,8 @@ class SeckillExecutor:
             f"[{self.account_name}] 尝试 {self.attempts}/{self.max_attempts} 失败，重试中..."
         )
 
-    def start_seckill(self) -> None:
-        """开始秒杀"""
+    async def start_seckill(self) -> None:
+        """异步开始秒杀"""
         # 等待到指定开始时间
         self.time_synchronizer.wait_for_time(self.start_time, self.time_diff)
 
@@ -187,40 +225,40 @@ class SeckillExecutor:
         actual_start_datetime = datetime.fromtimestamp(
             actual_start_time + self.time_diff
         )
-        thread_id = threading.current_thread().ident
         logger.info(
-            f"[{self.account_name}] 线程{thread_id} 实际开始时间: {actual_start_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
+            f"[{self.account_name}] 实际开始时间: {actual_start_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')}"
         )
-        result = self.post_seckill_url()
+        result = await self.post_seckill_url()
         self._send_notification(result)
 
     def run(self) -> None:
         """运行秒杀"""
         thread_id = threading.current_thread().ident
-        logger.info(f"[{self.account_name}] 线程{thread_id} 等待开始时间: {self.start_time}")
+        logger.info(
+            f"[{self.account_name}] 线程{thread_id} 等待开始时间: {self.start_time}"
+        )
 
         # 刷新代理列表
         if self.proxy_flag:
             self.proxy_manager.refresh_proxies()
 
-        seckill_threads: List[threading.Thread] = []
-        for _ in range(self.thread_count):
-            t = threading.Thread(target=self.start_seckill)
-            t.start()
-            seckill_threads.append(t)
-
-        for t in seckill_threads:
-            t.join()
+        # 使用异步执行
+        asyncio.run(self._run_async())
 
         thread_id = threading.current_thread().ident
         logger.info(f"[{self.account_name}] 线程{thread_id} 秒杀完成")
+
+    async def _run_async(self) -> None:
+        """单协程执行，保证精确时间控制"""
+        # 只创建一个任务，不使用并发，确保时间控制精确
+        await self.start_seckill()
 
     def _send_notification(self, result: dict) -> None:
         """统一发送通知"""
         task_info = {
             "account_name": self.account_name,
             "description": f"秒杀任务 - {self.account_name}",
-            "start_time": self.start_time.strftime("%H:%M:%S.%f")[:-3],
+            "start_time": self.start_time.strftime("%H:%M:%S.%f"),
         }
 
         if not result:

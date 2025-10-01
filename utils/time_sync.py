@@ -145,10 +145,12 @@ class TimeSynchronizer:
 
 def print_time_cost(func):
     """打印函数执行时间"""
-    def wrapper(*args, **kwargs):
+
+    async def wrapper(*args, **kwargs):
         start_time = time.time()
-        result = func(*args, **kwargs)
+        result = await func(*args, **kwargs)
         end_time = time.time()
         logger.info(f"函数 {func.__name__} 执行时间: {end_time - start_time:.6f} 秒")
         return result
+
     return wrapper
