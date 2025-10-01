@@ -156,10 +156,9 @@ class SeckillExecutor:
         """异步发送请求"""
         url, process_data, headers = self._prepare_request()
         proxies = self.get_formatted_proxy()
-
         if self._should_stop():
             return None
-
+        logger.info(f"[{self.account_name}] 发送请求")
         try:
             async with requests.AsyncSession() as session:
                 response = await session.get(
