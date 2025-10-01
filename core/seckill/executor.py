@@ -81,26 +81,19 @@ class SeckillExecutor:
 
     def post_seckill_url(self) -> dict:
         """执行秒杀请求并返回结果"""
+        result = None
         while not self._should_stop():
             try:
                 response = self._make_request()
                 result = self._handle_response(response)
-                if result:
+                if result["success"]:
                     return result
             except Exception as e:
                 self._handle_error(e)
             self.attempts += 1
             if self._should_stop():
-                break
+                return result
             time.sleep(0.02)
-
-        # 如果没有成功，返回失败结果
-        return {
-            "success": False,
-            "message": "秒杀失败",
-            "details": f"尝试了 {self.max_attempts} 次",
-            "failure_reason": f"达到最大尝试次数 ({self.max_attempts}) 仍未成功",
-        }
 
     def _should_stop(self) -> bool:
         """检查是否应该停止请求"""
@@ -134,7 +127,6 @@ class SeckillExecutor:
                 proxies=proxies,
                 timeout=1,
             )
-            print(response.text)
             return response
         except requests.Timeout:
             raise RequestError("请求超时")
@@ -150,11 +142,11 @@ class SeckillExecutor:
             response_data = strategy.process_response(response)
             message = response_data.get(self.key_message, "")
 
-            logger.debug(f"[{self.account_name}] 响应: {message}")
+            thread_id = threading.current_thread().ident
+            logger.debug(f"[{self.account_name}] 线程{thread_id} 响应: {message}")
 
             if self.key_value in message.lower():
-                logger.info(f"[{self.account_name}] 成功完成请求")
-                self.stop_flag.set()
+                logger.info(f"[{self.account_name}] 线程{thread_id} 成功完成请求")
                 return {
                     "success": True,
                     "message": message,
@@ -162,7 +154,7 @@ class SeckillExecutor:
                     "failure_reason": None,
                 }
             else:
-                logger.warning(f"[{self.account_name}] 意外响应: {message}")
+                logger.warning(f"[{self.account_name}] 线程{thread_id} 意外响应: {message}")
                 return {
                     "success": False,
                     "message": f"意外响应: {message}",
@@ -194,15 +186,17 @@ class SeckillExecutor:
         actual_start_datetime = datetime.fromtimestamp(
             actual_start_time + self.time_diff
         )
+        thread_id = threading.current_thread().ident
         logger.info(
-            f"[{self.account_name}] 实际开始时间: {actual_start_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
+            f"[{self.account_name}] 线程{thread_id} 实际开始时间: {actual_start_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
         )
         result = self.post_seckill_url()
         self._send_notification(result)
 
     def run(self) -> None:
         """运行秒杀"""
-        logger.info(f"[{self.account_name}] 等待开始时间: {self.start_time}")
+        thread_id = threading.current_thread().ident
+        logger.info(f"[{self.account_name}] 线程{thread_id} 等待开始时间: {self.start_time}")
 
         # 刷新代理列表
         if self.proxy_flag:
@@ -217,7 +211,8 @@ class SeckillExecutor:
         for t in seckill_threads:
             t.join()
 
-        logger.info(f"[{self.account_name}] 秒杀完成")
+        thread_id = threading.current_thread().ident
+        logger.info(f"[{self.account_name}] 线程{thread_id} 秒杀完成")
 
     def _send_notification(self, result: dict) -> None:
         """统一发送通知"""
