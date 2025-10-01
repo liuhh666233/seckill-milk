@@ -42,6 +42,12 @@ python main.py seckill --config kudicookie.json
 # 启动调度器
 python main.py scheduler --mode watch
 
+# 运行指定小时的任务
+python main.py scheduler --mode hour --hour 10
+
+# 运行当前小时的任务
+python main.py scheduler --mode now
+
 # 验证配置文件
 python main.py validate --config kudicookie.json
 

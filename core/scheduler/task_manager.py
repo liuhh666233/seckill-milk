@@ -17,7 +17,7 @@ from config import TaskSchedule, ConfigManager
 class TaskManager:
     """任务管理器"""
 
-    def __init__(self, schedule_file: str = "schedule.json"):
+    def __init__(self, schedule_file: str = "configs/schedule.json"):
         self.schedule_file = schedule_file
         self.schedules: Dict[str, List[TaskSchedule]] = {}
         self.config_manager = ConfigManager()
