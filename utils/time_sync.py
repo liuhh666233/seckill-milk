@@ -141,3 +141,14 @@ class TimeSynchronizer:
                 sleep_time = 0.0001  # 剩余时间很短时，每0.1毫秒检查一次
 
             time.sleep(sleep_time)
+
+
+def print_time_cost(func):
+    """打印函数执行时间"""
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        logger.info(f"函数 {func.__name__} 执行时间: {end_time - start_time:.6f} 秒")
+        return result
+    return wrapper

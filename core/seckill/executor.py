@@ -14,7 +14,7 @@ from curl_cffi import requests
 from loguru import logger
 
 from strategies import RequestStrategyManager
-from utils import TimeSynchronizer, ProxyManager
+from utils import TimeSynchronizer, ProxyManager, print_time_cost
 from config import UserConfig, SeckillConfig
 from core.notification import NotificationConfigManager
 
@@ -115,6 +115,7 @@ class SeckillExecutor:
             datetime.now(), self._data, self._headers, self._base_url
         )
 
+    @print_time_cost
     def _make_request(self) -> requests.Response:
         """发送请求"""
         url, process_data, headers = self._prepare_request()
