@@ -45,17 +45,7 @@ class SeckillScheduler:
             logger.info(f"配置文件: {task.config_file}")
 
             manager = SeckillManager(config_file=task.config_file)
-            result = manager.run()
-
-            # 发送任务结果通知
-            task_info = {
-                "description": task.description,
-                "start_time": task.start_time.strftime("%H:%M:%S.%f")[:-3],
-            }
-            # 确保result包含必要信息
-            if not isinstance(result, dict):
-                result = {"success": True, "message": "任务执行完成"}
-            self.notification_manager.notify_task_result(task_info, result)
+            manager.run()
 
         except Exception as e:
             logger.error(f"任务执行失败: {str(e)}")

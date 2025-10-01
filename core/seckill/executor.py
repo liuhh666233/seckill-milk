@@ -32,7 +32,9 @@ class SeckillExecutor:
         self.user_config = user_config
         self.global_config = global_config
         self.time_diff = time_diff
-        self.notification_manager = notification_manager or NotificationConfigManager().initialize_services()
+        self.notification_manager = (
+            notification_manager or NotificationConfigManager().initialize_services()
+        )
 
         # 基础配置
         self.cookie_id = user_config.cookie_id
@@ -47,6 +49,7 @@ class SeckillExecutor:
             **user_config.headers,
             user_config.cookie_name: user_config.cookie_id,
         }
+
         self._data = user_config.data
         self._base_url = user_config.basurl
 
@@ -76,18 +79,35 @@ class SeckillExecutor:
             return None
         return self.proxy_manager.get_random_proxy()
 
-    def post_seckill_url(self) -> None:
-        """执行秒杀请求"""
+    def post_seckill_url(self) -> dict:
+        """执行秒杀请求并返回结果"""
+        is_first_request = True
+
         while not self._should_stop():
             try:
                 response = self._make_request()
-                self._handle_response(response)
+                result = self._handle_response(response)
+                if result:
+                    return result
             except Exception as e:
                 self._handle_error(e)
-
             self.attempts += 1
             if self._should_stop():
                 break
+
+            # 第一次请求失败后, 不进行等待, 直接进行第二次请求, 之后每次请求后等待0.05秒
+            if is_first_request:
+                is_first_request = False
+            else:
+                time.sleep(0.05)
+
+        # 如果没有成功，返回失败结果
+        return {
+            "success": False,
+            "message": "秒杀失败",
+            "details": f"尝试了 {self.max_attempts} 次",
+            "failure_reason": f"达到最大尝试次数 ({self.max_attempts}) 仍未成功",
+        }
 
     def _should_stop(self) -> bool:
         """检查是否应该停止请求"""
@@ -128,8 +148,8 @@ class SeckillExecutor:
         except requests.RequestException as e:
             raise RequestError(f"请求失败: {str(e)}")
 
-    def _handle_response(self, response: requests.Response) -> None:
-        """处理响应"""
+    def _handle_response(self, response: requests.Response) -> dict:
+        """处理响应并返回结果"""
         try:
             strategy = self.strategy_manager.get_strategy(
                 self.user_config.strategy_flag
@@ -142,12 +162,20 @@ class SeckillExecutor:
             if self.key_value in message.lower():
                 logger.info(f"[{self.account_name}] 成功完成请求")
                 self.stop_flag.set()
-                self.notification_manager.notify_task_result(
-                    {"account_name": self.account_name, "message": message},
-                    {"success": True, "message": message},
-                )
+                return {
+                    "success": True,
+                    "message": message,
+                    "details": f"成功完成秒杀",
+                    "failure_reason": None,
+                }
             else:
                 logger.warning(f"[{self.account_name}] 意外响应: {message}")
+                return {
+                    "success": False,
+                    "message": f"意外响应: {message}",
+                    "details": f"尝试了 {self.attempts} 次",
+                    "failure_reason": "服务器返回意外响应",
+                }
 
         except Exception as e:
             raise ResponseError(f"处理响应失败: {str(e)}")
@@ -176,23 +204,8 @@ class SeckillExecutor:
         logger.info(
             f"[{self.account_name}] 实际开始时间: {actual_start_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
         )
-
-        # 立即开始第一次请求，不等待
-        try:
-            self.post_seckill_url()
-        except Exception as e:
-            logger.error(f"[{self.account_name}] 首次请求失败: {e}")
-
-        # 继续循环执行后续请求
-        while not self.stop_flag.is_set():
-            try:
-                self.post_seckill_url()
-            except Exception as e:
-                logger.error(f"[{self.account_name}] 请求失败: {e}")
-
-            # 只有在没有成功的情况下才等待，减少成功情况下的延迟
-            if not self.stop_flag.is_set():
-                time.sleep(0.1)
+        result = self.post_seckill_url()
+        self._send_notification(result)
 
     def run(self) -> None:
         """运行秒杀"""
@@ -211,25 +224,25 @@ class SeckillExecutor:
         for t in seckill_threads:
             t.join()
 
-        # 检查是否成功完成
-        if not self.stop_flag.is_set():
-            # 如果所有线程都结束了但stop_flag未设置，说明失败了
-            failure_reason = f"达到最大尝试次数 ({self.max_attempts}) 仍未成功"
-            self.notification_manager.notify_task_result(
-                {
-                    "account_name": self.account_name,
-                    "description": f"秒杀任务 - {self.account_name}",
-                    "start_time": self.start_time.strftime("%H:%M:%S.%f")[:-3],
-                },
-                {
-                    "success": False,
-                    "message": "秒杀失败",
-                    "details": f"尝试了 {self.max_attempts} 次",
-                    "failure_reason": failure_reason,
-                },
-            )
-
         logger.info(f"[{self.account_name}] 秒杀完成")
+
+    def _send_notification(self, result: dict) -> None:
+        """统一发送通知"""
+        task_info = {
+            "account_name": self.account_name,
+            "description": f"秒杀任务 - {self.account_name}",
+            "start_time": self.start_time.strftime("%H:%M:%S.%f")[:-3],
+        }
+
+        if not result:
+            result = {
+                "success": False,
+                "message": "秒杀失败",
+                "details": f"尝试了 {self.max_attempts} 次",
+                "failure_reason": f"达到最大尝试次数 ({self.max_attempts}) 仍未成功",
+            }
+
+        self.notification_manager.notify_task_result(task_info, result)
 
 
 class RequestError(Exception):

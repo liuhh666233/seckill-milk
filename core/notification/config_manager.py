@@ -28,9 +28,9 @@ class NotificationConfigManager:
                 logger.warning(f"通知配置文件不存在: {self.config_file}")
                 return {}
 
-            with open(self.config_file, 'r', encoding='utf-8') as f:
+            with open(self.config_file, "r", encoding="utf-8") as f:
                 config = json.load(f)
-            
+
             logger.info(f"加载通知配置: {self.config_file}")
             return config
         except Exception as e:
@@ -40,7 +40,7 @@ class NotificationConfigManager:
     def initialize_services(self) -> NotificationManager:
         """初始化通知服务"""
         config = self.load_config()
-        
+
         if not config:
             logger.warning("通知配置为空，跳过服务初始化")
             return self.notification_manager
@@ -58,7 +58,7 @@ class NotificationConfigManager:
             try:
                 service = self._create_service(service_name, service_config)
                 if service:
-                    is_default = (service_name == default_service)
+                    is_default = service_name == default_service
                     self.notification_manager.register_service(
                         service_name, service, is_default=is_default
                     )
@@ -71,17 +71,17 @@ class NotificationConfigManager:
     def _create_service(self, service_name: str, service_config: Dict[str, Any]):
         """创建通知服务实例"""
         service_type = service_config.get("type")
-        
+
         if service_type == "lark":
             return LarkNotificationService(
                 webhook_url=service_config.get("webhook_url", ""),
-                secret=service_config.get("secret", "")
+                secret=service_config.get("secret", ""),
             )
         elif service_type == "wechat":
             return WeChatNotificationService(
                 app_id=service_config.get("app_id", ""),
                 app_secret=service_config.get("app_secret", ""),
-                template_id=service_config.get("template_id", "")
+                template_id=service_config.get("template_id", ""),
             )
         else:
             logger.error(f"不支持的通知服务类型: {service_type}")
@@ -91,10 +91,14 @@ class NotificationConfigManager:
         """获取可用的通知服务列表"""
         return self.notification_manager.get_available_services()
 
-    def send_message(self, message: str, service_name: Optional[str] = None, **kwargs) -> bool:
+    def send_message(
+        self, message: str, service_name: Optional[str] = None, **kwargs
+    ) -> bool:
         """发送消息"""
         return self.notification_manager.send_message(message, service_name, **kwargs)
 
-    def notify_task_result(self, task_info: Dict[str, Any], result: Dict[str, Any]) -> bool:
+    def notify_task_result(
+        self, task_info: Dict[str, Any], result: Dict[str, Any]
+    ) -> bool:
         """通知任务结果"""
         return self.notification_manager.notify_task_result(task_info, result)
