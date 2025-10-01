@@ -100,7 +100,7 @@ class SeckillExecutor:
 
     async def _request_generator(self):
         """异步生成器，按精确间隔产生请求（不受请求执行时间影响）"""
-        request_interval = self.user_config.request_interval 
+        request_interval = self.user_config.request_interval
         start_time = time.time()
 
         # 预先创建所有请求任务

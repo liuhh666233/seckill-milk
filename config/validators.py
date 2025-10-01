@@ -97,7 +97,9 @@ class ConfigValidator:
             logger.error(f"用户 {index} thread_count 必须是整数")
             return False
 
-        if "request_interval" in user and not isinstance(user["request_interval"], (int, float)):
+        if "request_interval" in user and not isinstance(
+            user["request_interval"], (int, float)
+        ):
             logger.error(f"用户 {index} request_interval 必须是数字")
             return False
 
