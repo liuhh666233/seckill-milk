@@ -97,39 +97,16 @@ class TimeSynchronizer:
         logger.debug(f"时间差: {time_diff:.3f} 秒")
 
         while True:
-            # 使用高精度时间计算
             current_timestamp = time.time()
-            current_local = datetime.fromtimestamp(current_timestamp).time()
             adjusted_timestamp = current_timestamp + time_diff
-            adjusted_time = datetime.fromtimestamp(adjusted_timestamp).time()
-
             # 计算到启动时间的精确秒数差
             target_datetime = datetime.combine(date.today(), target_time)
             adjusted_datetime = datetime.fromtimestamp(adjusted_timestamp)
-
             time_diff_seconds = (target_datetime - adjusted_datetime).total_seconds()
-
             # 如果时间已到或已过，立即启动
             if time_diff_seconds <= 0:
                 logger.info("Starting seckill...")
                 break
-
-            # 如果剩余时间很短（小于0.001秒），使用忙等待
-            if time_diff_seconds <= 0.001:
-                logger.debug(f"进入精确等待模式，剩余: {time_diff_seconds:.6f} 秒")
-                while True:
-                    current_timestamp = time.time()
-                    adjusted_timestamp = current_timestamp + time_diff
-                    adjusted_datetime = datetime.fromtimestamp(adjusted_timestamp)
-                    time_diff_seconds = (
-                        target_datetime - adjusted_datetime
-                    ).total_seconds()
-                    if time_diff_seconds <= 0:
-                        logger.info("Starting seckill...")
-                        return
-                    # 微秒级忙等待
-                    time.sleep(0.0001)  # 0.1毫秒
-
             # 根据剩余时间调整睡眠间隔
             if time_diff_seconds > 5:
                 sleep_time = 0.1  # 剩余时间长时，每100毫秒检查一次
@@ -139,7 +116,6 @@ class TimeSynchronizer:
                 sleep_time = 0.001  # 剩余时间短时，每1毫秒检查一次
             else:
                 sleep_time = 0.0001  # 剩余时间很短时，每0.1毫秒检查一次
-
             time.sleep(sleep_time)
 
 
