@@ -11,20 +11,8 @@ from wechat_notify import NotificationManager
 
 class SeckillScheduler:
     def __init__(self):
-        self.setup_logging()
         self.schedule_manager = ScheduleManager()
         self.notification_manager = NotificationManager()
-
-    def setup_logging(self):
-        """配置日志"""
-        logger.remove()  # 移除默认处理器
-
-        # 添加控制台输出
-        logger.add(
-            sys.stdout,
-            format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-            level="INFO",
-        )
 
     def run_task(self, task: TaskSchedule):
         """运行单个任务"""

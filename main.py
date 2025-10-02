@@ -34,7 +34,23 @@ def setup_logging(verbose: bool = False):
         "<level>{message}</level>"
     )
 
+    # 输出到控制台
     logger.add(sys.stdout, format=format_str, level=level)
+
+    # 确保logs目录存在
+    logs_dir = Path("logs")
+    logs_dir.mkdir(exist_ok=True)
+    
+    # 输出到文件, 每天一个文件 - 使用绝对路径
+    log_file_path = logs_dir / "seckill_{time:YYYY-MM-DD}.log"
+    logger.add(
+        str(log_file_path),
+        format=format_str,
+        level=level,
+        rotation="1 day",
+        retention="10 days",
+        enqueue=True
+    )
 
 
 def ensure_configs_dir():
