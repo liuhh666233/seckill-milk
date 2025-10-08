@@ -149,9 +149,8 @@ class Seckkiller:
             actual_start_time + self.time_diff
         )
         logger.info(
-            f"[{self.account_name}] 实际开始时间: {actual_start_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}"
+            f"[{self.account_name}] 实际开始时间: {actual_start_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')}"
         )
-        # 立即开始第一次请求，不等待
         try:
             self.post_seckill_url()
         except Exception as e:
@@ -237,9 +236,7 @@ class Seckkiller:
         while True:
             # 使用高精度时间计算
             current_timestamp = time.time()
-            current_local = datetime.fromtimestamp(current_timestamp).time()
             adjusted_timestamp = current_timestamp + self.time_diff
-            adjusted_time = datetime.fromtimestamp(adjusted_timestamp).time()
 
             # 计算到启动时间的精确秒数差
             target_datetime = datetime.combine(date.today(), self.start_time)
